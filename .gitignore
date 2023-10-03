@@ -1,0 +1,4 @@
+*.o
+boa
+boa-indexer
+afl_output
