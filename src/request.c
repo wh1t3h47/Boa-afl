@@ -133,11 +133,11 @@ void get_request(int server_s)
 /* XXX Either delete this, or document why it's needed */
 /* Pointed out 3-Oct-1999 by Paul Saab <paul@mu.org> */
 #ifdef REUSE_EACH_CLIENT_CONNECTION_SOCKET
-    if ((setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&sock_opt,
-                    sizeof(sock_opt))) == -1)
-    {
-        DIE("setsockopt: unable to set SO_REUSEADDR");
-    }
+    // if ((setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&sock_opt,
+    //                 sizeof(sock_opt))) == -1)
+    // {
+    //     DIE("setsockopt: unable to set SO_REUSEADDR");
+    // }
 #endif
 
     len = sizeof(salocal);
@@ -164,12 +164,12 @@ void get_request(int server_s)
     ascii_sockaddr(&salocal, conn->local_ip_addr, NI_MAXHOST);
 
     /* nonblocking socket */
-    if (set_nonblock_fd(conn->fd) == -1)
-        WARN("fcntl: unable to set new socket to non-block");
+    // if (set_nonblock_fd(conn->fd) == -1)
+    //     WARN("fcntl: unable to set new socket to non-block");
 
     /* set close on exec to true */
-    if (fcntl(conn->fd, F_SETFD, 1) == -1)
-        WARN("fctnl: unable to set close-on-exec for new socket");
+    // if (fcntl(conn->fd, F_SETFD, 1) == -1)
+    //     WARN("fctnl: unable to set close-on-exec for new socket");
 
     /* Increase buffer size if we have to.
      * Only ask the system the buffer size on the first request,
@@ -178,31 +178,31 @@ void get_request(int server_s)
     if (system_bufsize == 0)
     {
         len = sizeof(system_bufsize);
-        if (getsockopt(conn->fd, SOL_SOCKET, SO_SNDBUF, &system_bufsize, &len) == 0 && len == sizeof(system_bufsize))
-        {
-            /*
-               fprintf(stderr, "%sgetsockopt reports SNDBUF %d\n",
-               get_commonlog_time(), system_bufsize);
-             */
-            ;
-        }
-        else
-        {
-            WARN("getsockopt(SNDBUF)");
-            system_bufsize = 1;
-        }
+        // if (getsockopt(conn->fd, SOL_SOCKET, SO_SNDBUF, &system_bufsize, &len) == 0 && len == sizeof(system_bufsize))
+        // {
+        //     /*
+        //        fprintf(stderr, "%sgetsockopt reports SNDBUF %d\n",
+        //        get_commonlog_time(), system_bufsize);
+        //      */
+        //     ;
+        // }
+        // else
+        // {
+        //     WARN("getsockopt(SNDBUF)");
+        //     system_bufsize = 1;
+        // }
     }
-    if (system_bufsize < sockbufsize)
-    {
-        if (setsockopt(conn->fd, SOL_SOCKET, SO_SNDBUF, (void *)&sockbufsize,
-                       sizeof(sockbufsize)) == -1)
-        {
-            WARN("setsockopt: unable to set socket buffer size");
-#ifdef DIE_ON_ERROR_TUNING_SNDBUF
-            exit(errno);
-#endif
-        }
-    }
+    // if (system_bufsize < sockbufsize)
+    //{
+    //  if (setsockopt(conn->fd, SOL_SOCKET, SO_SNDBUF, (void *)&sockbufsize,
+    //               sizeof(sockbufsize)) == -1)
+    // {
+    //   WARN("setsockopt: unable to set socket buffer size");
+    // #ifdef DIE_ON_ERROR_TUNING_SNDBUF
+    //  exit(errno);
+    // #endif
+    // }
+    //}
 
     /* for log file and possible use by CGI programs */
     ascii_sockaddr(&remote_addr, conn->remote_ip_addr, NI_MAXHOST);
@@ -214,14 +214,14 @@ void get_request(int server_s)
 
 #ifdef USE_TCPNODELAY
     /* Thanks to Jef Poskanzer <jef@acme.com> for this tweak */
-    {
-        int one = 1;
-        if (setsockopt(conn->fd, IPPROTO_TCP, TCP_NODELAY,
-                       (void *)&one, sizeof(one)) == -1)
-        {
-            DIE("setsockopt: unable to set TCP_NODELAY");
-        }
-    }
+    //{
+    //    int one = 1;
+    //    if (setsockopt(conn->fd, IPPROTO_TCP, TCP_NODELAY,
+    //                   (void *)&one, sizeof(one)) == -1)
+    //    {
+    //        DIE("setsockopt: unable to set TCP_NODELAY");
+    //    }
+    //}
 #endif
 
 #ifndef NO_RATE_LIMIT
@@ -384,8 +384,7 @@ static void free_request(request **list_head_addr, request *req)
         read(req->fd, buf, 32768);
     }
     close(req->fd);
-    printf("fechando request");
-    exit(0);
+
     total_connections--;
 
     enqueue(&request_free, req);
@@ -405,6 +404,9 @@ static void free_request(request **list_head_addr, request *req)
 
 void process_requests(int server_s)
 {
+#ifdef __AFL_HAVE_MANUAL_CONTROL
+    __AFL_INIT();
+#endif
     int retval = 0;
     request *current, *trailer;
 
@@ -445,6 +447,7 @@ void process_requests(int server_s)
         }
         else
         {
+            // current->status &&printf("current->status: %d\n", current->status);
             switch (current->status)
             {
             case READ_HEADER:
@@ -521,10 +524,13 @@ void process_requests(int server_s)
             trailer = current;
             current = current->next;
             free_request(&request_ready, trailer);
-            break;
+            // printf("request feito\n");
+            //  afl (modo de aceitar uma entrada e quitar)
+            exit(0);
+
         case 1: /* more to do */
-            current->time_last = current_time;
-            current = current->next;
+            // current->time_last = current_time;
+            // current = current->next;
             break;
         default:
             log_error_time();

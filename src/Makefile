@@ -2,7 +2,7 @@
 .SUFFIXES: .o .c
 .PHONY: clean mrclean distclean depend all dist
 
-AFL_CC = /home/skid/AFLplusplus/afl-clang-fast
+AFL_CC = afl-lto
 GCC_FLAGS = -Wstrict-prototypes -Wpointer-arith -Wcast-align -Wcast-qual\
   -Wtraditional\
   -Wshadow\
@@ -15,17 +15,16 @@ GCC_FLAGS = -Wstrict-prototypes -Wpointer-arith -Wcast-align -Wcast-qual\
 
 srcdir = .
 VPATH = .:./../extras
-LDFLAGS =  -g
+LDFLAGS =  # -g
 LIBS =  
-CFLAGS = -g -O2 -pipe -Wall -I. # -fsanitize=address  # Adiciona a flag de instrumentação do AFL
-
+CFLAGS = -O3 -Wall -I. # -gg
 
 # Change these if necessary
 
 YACC = bison -y 
 LEX = flex 
-CC = /home/skid/AFLplusplus/afl-clang-fast 
-CPP = /home/skid/AFLplusplus/afl-clang-fast -E
+CC = afl-lto 
+CPP = afl-lto++
 
 SOURCES = alias.c boa.c buffer.c cgi.c cgi_header.c config.c escape.c \
 	get.c hash.c ip.c log.c mmap_cache.c pipe.c queue.c read.c \
@@ -37,6 +36,28 @@ all:	boa boa_indexer
 
 boa:	$(OBJS)
 	$(AFL_CC) -o $@ $^ $(LDFLAGS) $(LIBS)   # Usa AFL_CC para compilar com AFL
+
+boa-asan:  $(OBJS)
+	env AFL_USE_ASAN=1  \
+	$(CC) -o $@ $^ $(LDFLAGS) -fsanitize=address $(LIBS) -fsanitize=address
+
+boa-ubsan: $(OBJS)
+	env AFL_USE_UBSAN=1 \
+	$(CC) -o $@ $^ $(LDFLAGS) -fsanitize=undefined $(LIBS) -fsanitize=undefined
+
+boa-cfisan: $(OBJS)
+	env AFL_USE_CFISAN=1 \
+	$(CC) -o $@ $^ $(LDFLAGS) -fsanitize=cfi $(LIBS) -fsanitize=cfi
+
+boa-msan:  $(OBJS)
+	env AFL_USE_MSAN=1 \
+	$(CC) -o $@ $^ $(LDFLAGS) -fsanitize=memory $(LIBS) -fsanitize=memory
+
+boa-compcov: $(OBJS)
+	env AFL_LLVM_LAF_ALL=1 $(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+boa-redqueen: $(OBJS)
+	env AFL_LLVM_CMPLOG=1 $(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 boa_indexer:	index_dir.o escape.o   
 	$(AFL_CC) -o $@ $^ $(LDFLAGS) $(LIBS)   # Usa AFL_CC para compilar com AFL

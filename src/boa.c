@@ -205,11 +205,11 @@ static int create_server_socket(void)
     }
 
     /* reuse socket addr */
-    if ((setsockopt(server_s, SOL_SOCKET, SO_REUSEADDR, (void *)&sock_opt,
-                    sizeof(sock_opt))) == -1)
-    {
-        DIE("setsockopt");
-    }
+    // if ((setsockopt(server_s, SOL_SOCKET, SO_REUSEADDR, (void *)&sock_opt,
+    //                 sizeof(sock_opt))) == -1)
+    // {
+    //     DIE("setsockopt");
+    // }
 
     /* internet family-specific code encapsulated in bind_server()  */
     // if (bind_server(server_s, server_ip) == -1) {

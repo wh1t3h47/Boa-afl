@@ -25,15 +25,16 @@
 
 #include "boa.h"
 #ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h>           /* wait */
+#include <sys/wait.h> /* wait */
 #endif
-#include <signal.h>             /* signal */
+#include <signal.h> /* signal */
 
 sigjmp_buf env;
 int handle_sigbus;
 
-void sigsegv(int);
-void sigbus(int);
+// afl evitar handler de crashes
+// void sigsegv(int);
+// void sigbus(int);
 void sigterm(int);
 void sighup(int);
 void sigint(int);
@@ -63,11 +64,14 @@ void init_signals(void)
     sigaddset(&sa.sa_mask, SIGUSR1);
     sigaddset(&sa.sa_mask, SIGUSR2);
 
-    sa.sa_handler = sigsegv;
-    sigaction(SIGSEGV, &sa, NULL);
+    // afl, esses handlers evitam que o programe crashe quando queremos que
+    // ele crashe pra pegar no fuzzing
 
-    sa.sa_handler = sigbus;
-    sigaction(SIGBUS, &sa, NULL);
+    // sa.sa_handler = sigsegv;
+    // sigaction(SIGSEGV, &sa, NULL);
+
+    // sa.sa_handler = sigbus;
+    // sigaction(SIGBUS, &sa, NULL);
 
     sa.sa_handler = sigterm;
     sigaction(SIGTERM, &sa, NULL);
@@ -109,7 +113,8 @@ extern int handle_sigbus;
 
 void sigbus(int dummy)
 {
-    if (handle_sigbus) {
+    if (handle_sigbus)
+    {
         longjmp(env, dummy);
     }
     time(&current_time);
@@ -140,7 +145,7 @@ void sigterm_stage2_run() /* lame duck mode */
     log_error_time();
     fprintf(stderr,
             "exiting Boa normally (uptime %d seconds)\n",
-            (int) (current_time - start_time));
+            (int)(current_time - start_time));
     chdir(tempdir);
     clear_common_env();
     dump_mime();
@@ -149,7 +154,6 @@ void sigterm_stage2_run() /* lame duck mode */
     free_requests();
     exit(0);
 }
-
 
 void sighup(int dummy)
 {
@@ -181,7 +185,6 @@ void sighup_run(void)
 
     log_error_time();
     fputs("successful restart\n", stderr);
-
 }
 
 void sigint(int dummy)
@@ -207,10 +210,11 @@ void sigchld_run(void)
     sigchld_flag = 0;
 
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
-        if (verbose_cgi_logs) {
+        if (verbose_cgi_logs)
+        {
             time(&current_time);
             log_error_time();
-            fprintf(stderr, "reaping child %d: status %d\n", (int) pid, status);
+            fprintf(stderr, "reaping child %d: status %d\n", (int)pid, status);
         }
     return;
 }

@@ -25,7 +25,7 @@
 #include "escape.h"
 
 #define INT_TO_HEX(x) \
-    ((((x)-10)>=0)?('A'+((x)-10)):('0'+(x)))
+    ((((x)-10) >= 0) ? ('A' + ((x)-10)) : ('0' + (x)))
 
 /*
  * Name: req_write
@@ -34,7 +34,7 @@
  * Returns: -1 for error, otherwise how much is stored
  */
 
-int req_write(request * req, char *msg)
+int req_write(request *req, char *msg)
 {
     int msg_len;
 
@@ -43,7 +43,8 @@ int req_write(request * req, char *msg)
     if (!msg_len || req->status == DEAD)
         return req->buffer_end;
 
-    if (req->buffer_end + msg_len > BUFFER_SIZE) {
+    if (req->buffer_end + msg_len > BUFFER_SIZE)
+    {
         log_error_time();
         fprintf(stderr, "Ran out of Buffer space!\n");
         req->status = DEAD;
@@ -66,7 +67,7 @@ void reset_output_buffer(request *req)
  *  encoded for URLs in HTTP headers.
  * Returns: -1 for error, otherwise how much is stored
  */
-int req_write_escape_http(request * req, char *msg)
+int req_write_escape_http(request *req, char *msg)
 {
     char c, *inp, *dest;
     int left;
@@ -75,19 +76,24 @@ int req_write_escape_http(request * req, char *msg)
     /* 3 is a guard band, since we don't check the destination pointer
      * in the middle of a transfer of up to 3 bytes */
     left = BUFFER_SIZE - req->buffer_end - 3;
-    while ((c = *inp++) && left > 0) {
-        if (needs_escape((unsigned int) c)) {
+    while ((c = *inp++) && left > 0)
+    {
+        if (needs_escape((unsigned int)c))
+        {
             *dest++ = '%';
             *dest++ = INT_TO_HEX(c >> 4);
             *dest++ = INT_TO_HEX(c & 15);
             left -= 3;
-        } else {
+        }
+        else
+        {
             *dest++ = c;
             left--;
         }
     }
     req->buffer_end = dest - req->buffer;
-    if (left == 0) {
+    if (left == 0)
+    {
         log_error_time();
         fprintf(stderr, "Ran out of Buffer space!\n");
         req->status = DEAD;
@@ -103,7 +109,7 @@ int req_write_escape_http(request * req, char *msg)
  *  encoded for HTML bodies.
  * Returns: -1 for error, otherwise how much is stored
  */
-int req_write_escape_html(request * req, char *msg)
+int req_write_escape_html(request *req, char *msg)
 {
     char c, *inp, *dest;
     int left;
@@ -112,8 +118,10 @@ int req_write_escape_html(request * req, char *msg)
     /* 5 is a guard band, since we don't check the destination pointer
      * in the middle of a transfer of up to 5 bytes */
     left = BUFFER_SIZE - req->buffer_end - 5;
-    while ((c = *inp++) && left > 0) {
-        switch (c) {
+    while ((c = *inp++) && left > 0)
+    {
+        switch (c)
+        {
         case '>':
             *dest++ = '&';
             *dest++ = 'g';
@@ -151,7 +159,8 @@ int req_write_escape_html(request * req, char *msg)
         }
     }
     req->buffer_end = dest - req->buffer;
-    if (left == 0) {
+    if (left == 0)
+    {
         log_error_time();
         fprintf(stderr, "Ran out of Buffer space!\n");
         req->status = DEAD;
@@ -159,7 +168,6 @@ int req_write_escape_html(request * req, char *msg)
     }
     return req->buffer_end;
 }
-
 
 /*
  * Name: flush_req
@@ -169,7 +177,7 @@ int req_write_escape_html(request * req, char *msg)
  * Returns: -2 for error, -1 for blocked, otherwise how much is stored
  */
 
-int req_flush(request * req)
+int req_flush(request *req)
 {
     int bytes_to_write;
 
@@ -177,16 +185,25 @@ int req_flush(request * req)
     if (req->status == DEAD)
         return -2;
 
-    if (bytes_to_write) {
+    if (bytes_to_write)
+    {
         int bytes_written;
 
         bytes_written = write(req->fd, req->buffer + req->buffer_start,
                               bytes_to_write);
 
-        if (bytes_written < 0) {
+        // print req->buffer up to req->buffer_start and req->buffer_end
+        char *buffer = req->buffer;
+        int buffer_start = req->buffer_start;
+        int buffer_end = req->buffer_end;
+        // usa %.s para imprimir uma string com tamanho variável
+
+        if (bytes_written < 0)
+        {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
-                return -1;      /* request blocked at the pipe level, but keep going */
-            else {
+                return -1; /* request blocked at the pipe level, but keep going */
+            else
+            {
                 req->buffer_start = req->buffer_end = 0;
                 if (errno != EPIPE)
                     perror("buffer flush"); /* OK to disable if your logs get too big */
@@ -198,7 +215,7 @@ int req_flush(request * req)
 #ifdef FASCIST_LOGGING
         log_error_time();
         fprintf(stderr, "%s:%d - Wrote \"", __FILE__, __LINE__);
-        fwrite(req->buffer + req->buffer_start, sizeof (char),
+        fwrite(req->buffer + req->buffer_start, sizeof(char),
                bytes_written, stderr);
         fprintf(stderr, "\" (%d bytes)\n", bytes_written);
 #endif
@@ -206,7 +223,7 @@ int req_flush(request * req)
     }
     if (req->buffer_start == req->buffer_end)
         req->buffer_start = req->buffer_end = 0;
-    return req->buffer_end;     /* successful */
+    return req->buffer_end; /* successful */
 }
 
 /*
@@ -221,7 +238,7 @@ int req_flush(request * req)
  * Returns: NULL on error, pointer to string otherwise.
  * Note: this function doesn't really belong here, I plopped it here to
  *  work around a "bug" in escape.h (it defines a global, so can't be
- *  used in multiple source files).  Actually, this routine shouldn't 
+ *  used in multiple source files).  Actually, this routine shouldn't
  *  exist anywhere, it's only usage is in get.c's handling of on-the-fly
  *  directory generation, which would be better configured to use a combination
  *  of req_write_escape_http and req_write_escape_html.  That would involve
@@ -237,21 +254,25 @@ char *escape_string(char *inp, char *buf)
     max = strlen(inp) * 3;
 
     if (buf == NULL && max)
-        buf = malloc(sizeof (char) * max + 1);
+        buf = malloc(sizeof(char) * max + 1);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         log_error_time();
         perror("malloc");
         return NULL;
     }
 
     index = buf;
-    while ((c = *inp++) && max > 0) {
-        if (needs_escape((unsigned int) c)) {
+    while ((c = *inp++) && max > 0)
+    {
+        if (needs_escape((unsigned int)c))
+        {
             *index++ = '%';
             *index++ = INT_TO_HEX(c >> 4);
             *index++ = INT_TO_HEX(c & 15);
-        } else
+        }
+        else
             *index++ = c;
     }
     *index = '\0';

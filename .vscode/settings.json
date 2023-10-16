@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "globals.h": "c",
+    "compat.h": "c",
+    "defines.h": "c"
+  }
+}

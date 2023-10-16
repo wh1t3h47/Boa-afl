@@ -34,13 +34,15 @@
  *   1: successful read, recycle in ready queue
  */
 
-int read_from_pipe(request * req)
+int read_from_pipe(request *req)
 {
     int bytes_read, bytes_to_read =
-        BUFFER_SIZE - (req->header_end - req->buffer);
+                        BUFFER_SIZE - (req->header_end - req->buffer);
 
-    if (bytes_to_read == 0) {   /* buffer full */
-        if (req->cgi_status == CGI_PARSE) { /* got+parsed header */
+    if (bytes_to_read == 0)
+    { /* buffer full */
+        if (req->cgi_status == CGI_PARSE)
+        { /* got+parsed header */
             req->cgi_status = CGI_BUFFER;
             *req->header_end = '\0'; /* points to end of read data */
             /* Could the above statement overwrite data???
@@ -55,32 +57,39 @@ int read_from_pipe(request * req)
 
     bytes_read = read(req->data_fd, req->header_end, bytes_to_read);
 #ifdef FASCIST_LOGGING
-    if (bytes_read > 0) {
+    if (bytes_read > 0)
+    {
         *(req->header_end + bytes_read) = '\0';
         fprintf(stderr, "pipe.c - read %d bytes: \"%s\"\n",
                 bytes_read, req->header_end);
-    } else
+    }
+    else
         fprintf(stderr, "pipe.c - read %d bytes\n", bytes_read);
     fprintf(stderr, "status, cgi_status: %d, %d\n", req->status,
             req->cgi_status);
 #endif
 
-    if (bytes_read == -1) {
+    if (bytes_read == -1)
+    {
         if (errno == EINTR)
             return 1;
         else if (errno == EWOULDBLOCK || errno == EAGAIN)
-            return -1;          /* request blocked at the pipe level, but keep going */
-        else {
-	    req->status = DEAD;
+            return -1; /* request blocked at the pipe level, but keep going */
+        else
+        {
+            req->status = DEAD;
             log_error_doc(req);
             perror("pipe read");
             return 0;
         }
-    } else if (bytes_read == 0) { /* eof, write rest of buffer */
+    }
+    else if (bytes_read == 0)
+    { /* eof, write rest of buffer */
         req->status = PIPE_WRITE;
-        if (req->cgi_status == CGI_PARSE) { /* hasn't processed header yet */
+        if (req->cgi_status == CGI_PARSE)
+        { /* hasn't processed header yet */
             req->cgi_status = CGI_DONE;
-            *req->header_end = '\0'; /* points to end of read data */
+            *req->header_end = '\0';        /* points to end of read data */
             return process_cgi_header(req); /* cgi_status will change */
         }
         req->cgi_status = CGI_DONE;
@@ -100,11 +109,12 @@ int read_from_pipe(request * req)
  *   1: successful write, recycle in ready queue
  */
 
-int write_from_pipe(request * req)
+int write_from_pipe(request *req)
 {
     int bytes_written, bytes_to_write = req->header_end - req->header_line;
 
-    if (bytes_to_write == 0) {
+    if (bytes_to_write == 0)
+    {
         if (req->cgi_status == CGI_DONE)
             return 0;
 
@@ -115,14 +125,16 @@ int write_from_pipe(request * req)
 
     bytes_written = write(req->fd, req->header_line, bytes_to_write);
 
-    if (bytes_written == -1) {
+    if (bytes_written == -1)
+    {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
-            return -1;          /* request blocked at the pipe level, but keep going */
+            return -1; /* request blocked at the pipe level, but keep going */
         else if (errno == EINTR)
             return 1;
-        else {
+        else
+        {
             req->status = DEAD;
-            send_r_error(req);  /* maybe superfluous */
+            send_r_error(req); /* maybe superfluous */
             log_error_doc(req);
             perror("pipe write");
             return 0;

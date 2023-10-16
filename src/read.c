@@ -36,7 +36,7 @@
  *   1: more to do, leave on ready list
  */
 
-int read_header(request * req)
+int read_header(request *req)
 {
     int bytes, buf_bytes_left;
     char *check, *buffer;
@@ -46,20 +46,26 @@ int read_header(request * req)
     bytes = req->client_stream_pos;
 
 #ifdef VERY_FASCIST_LOGGING
-    if (check < (buffer + bytes)) {
+    if (check < (buffer + bytes))
+    {
         buffer[bytes] = '\0';
         log_error_time();
         fprintf(stderr, "%s:%d - Parsing headers (\"%s\")\n",
                 __FILE__, __LINE__, check);
     }
 #endif
-    while (check < (buffer + bytes)) {
-        switch (req->status) {
+    while (check < (buffer + bytes))
+    {
+        switch (req->status)
+        {
         case READ_HEADER:
-            if (*check == '\r') {
+            if (*check == '\r')
+            {
                 req->status = ONE_CR;
                 req->header_end = check;
-            } else if (*check == '\n') {
+            }
+            else if (*check == '\n')
+            {
                 req->status = ONE_LF;
                 req->header_end = check;
             }
@@ -98,19 +104,24 @@ int read_header(request * req)
         fprintf(stderr, "status, check: %d, %d\n", req->status, *check);
 #endif
 
-        req->parse_pos++;       /* update parse position */
+        req->parse_pos++; /* update parse position */
         check++;
 
-        if (req->status == ONE_LF) {
+        if (req->status == ONE_LF)
+        {
             *req->header_end = '\0';
 
             /* terminate string that begins at req->header_line */
 
-            if (req->logline) {
-                if (process_option_line(req) == 0) {
+            if (req->logline)
+            {
+                if (process_option_line(req) == 0)
+                {
                     return 0;
                 }
-            } else {
+            }
+            else
+            {
                 if (process_logline(req) == 0)
                     return 0;
                 if (req->simple)
@@ -118,7 +129,9 @@ int read_header(request * req)
             }
             /* set header_line to point to beginning of new header */
             req->header_line = check;
-        } else if (req->status == BODY_READ) {
+        }
+        else if (req->status == BODY_READ)
+        {
 #ifdef VERY_FASCIST_LOGGING
             int retval;
             log_error_time();
@@ -130,7 +143,8 @@ int read_header(request * req)
 #endif
             /* process_header_end inits non-POST cgi's */
 
-            if (retval && req->method == M_POST) {
+            if (retval && req->method == M_POST)
+            {
                 /* for body_{read,write}, set header_line to start of data,
                    and header_end to end of data */
                 req->header_line = check;
@@ -154,19 +168,22 @@ int read_header(request * req)
 
                  */
 
-                if (req->content_length) {
+                if (req->content_length)
+                {
                     int content_length;
 
                     content_length = boa_atoi(req->content_length);
                     /* Is a content-length of 0 legal? */
-                    if (content_length <= 0) {
+                    if (content_length <= 0)
+                    {
                         log_error_time();
                         fprintf(stderr, "Invalid Content-Length [%s] on POST!\n",
                                 req->content_length);
                         send_r_bad_request(req);
                         return 0;
                     }
-                    if (single_post_limit && content_length > single_post_limit) {
+                    if (single_post_limit && content_length > single_post_limit)
+                    {
                         log_error_time();
                         fprintf(stderr, "Content-Length [%d] > SinglePostLimit [%d] on POST!\n",
                                 content_length, single_post_limit);
@@ -175,19 +192,22 @@ int read_header(request * req)
                     }
                     req->filesize = content_length;
                     req->filepos = 0;
-                    if (req->header_end - req->header_line > req->filesize) {
+                    if (req->header_end - req->header_line > req->filesize)
+                    {
                         req->header_end = req->header_line + req->filesize;
                     }
-                } else {
+                }
+                else
+                {
                     log_error_time();
                     fprintf(stderr, "Unknown Content-Length POST!\n");
                     send_r_bad_request(req);
                     return 0;
                 }
-            }                   /* either process_header_end failed or req->method != POST */
-            return retval;      /* 0 - close it done, 1 - keep on ready */
-        }                       /* req->status == BODY_READ */
-    }                           /* done processing available buffer */
+            }              /* either process_header_end failed or req->method != POST */
+            return retval; /* 0 - close it done, 1 - keep on ready */
+        }                  /* req->status == BODY_READ */
+    }                      /* done processing available buffer */
 
 #ifdef VERY_FASCIST_LOGGING
     log_error_time();
@@ -195,11 +215,13 @@ int read_header(request * req)
             __FILE__, __LINE__, req->status);
 #endif
 
-    if (req->status < BODY_READ) {
+    if (req->status < BODY_READ)
+    {
         /* only reached if request is split across more than one packet */
 
         buf_bytes_left = CLIENT_STREAM_SIZE - req->client_stream_pos;
-        if (buf_bytes_left < 1) {
+        if (buf_bytes_left < 1)
+        {
             log_error_time();
             fputs("buffer overrun - read.c, read_header - closing\n",
                   stderr);
@@ -209,7 +231,8 @@ int read_header(request * req)
 
         bytes = read(req->fd, buffer + req->client_stream_pos, buf_bytes_left);
 
-        if (bytes < 0) {
+        if (bytes < 0)
+        {
             if (errno == EINTR)
                 return 1;
             if (errno == EAGAIN || errno == EWOULDBLOCK) /* request blocked */
@@ -221,9 +244,11 @@ int read_header(request * req)
                return 0;
                */
             log_error_doc(req);
-            perror("header read");            /* don't need to save errno because log_error_doc does */
+            perror("header read"); /* don't need to save errno because log_error_doc does */
             return 0;
-        } else if (bytes == 0) {
+        }
+        else if (bytes == 0)
+        {
             /*
                log_error_time();
                fputs("unexpected end of headers\n", stderr);
@@ -270,7 +295,7 @@ int read_header(request * req)
 
  */
 
-int read_body(request * req)
+int read_body(request *req)
 {
     int bytes_read, bytes_to_read, bytes_free;
 
@@ -280,25 +305,32 @@ int read_body(request * req)
     if (bytes_to_read > bytes_free)
         bytes_to_read = bytes_free;
 
-    if (bytes_to_read <= 0) {
+    if (bytes_to_read <= 0)
+    {
         req->status = BODY_WRITE; /* go write it */
         return 1;
     }
 
     bytes_read = read(req->fd, req->header_end, bytes_to_read);
 
-    if (bytes_read == -1) {
-        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+    if (bytes_read == -1)
+    {
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+        {
             /*
                req->status = BODY_WRITE;
                return 1;
              */
             return -1;
-        } else {
+        }
+        else
+        {
             boa_perror(req, "read body");
             return 0;
         }
-    } else if (bytes_read == 0) {
+    }
+    else if (bytes_read == 0)
+    {
         /* this is an error.  premature end of body! */
         log_error_time();
         fprintf(stderr, "%s:%d - Premature end of body!!\n",
@@ -330,13 +362,14 @@ int read_body(request * req)
  *   1: successful write, recycle in ready queue
  */
 
-int write_body(request * req)
+int write_body(request *req)
 {
     int bytes_written, bytes_to_write = req->header_end - req->header_line;
     if (req->filepos + bytes_to_write > req->filesize)
         bytes_to_write = req->filesize - req->filepos;
 
-    if (bytes_to_write == 0) {  /* nothing left in buffer to write */
+    if (bytes_to_write == 0)
+    { /* nothing left in buffer to write */
         req->header_line = req->header_end = req->buffer;
         if (req->filepos >= req->filesize)
             return init_cgi(req);
@@ -344,21 +377,26 @@ int write_body(request * req)
         req->status = BODY_READ;
         return 1;
     }
+    printf("write_body\n");
     bytes_written = write(req->post_data_fd,
                           req->header_line, bytes_to_write);
 
-    if (bytes_written == -1) {
+    if (bytes_written == -1)
+    {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
-            return -1;          /* request blocked at the pipe level, but keep going */
+            return -1; /* request blocked at the pipe level, but keep going */
         else if (errno == EINTR)
             return 1;
-        else if (errno == ENOSPC) {
+        else if (errno == ENOSPC)
+        {
             /* 20010520 - Alfred Fluckiger */
             /* No test was originally done in this case, which might  */
             /* lead to a "no space left on device" error.             */
             boa_perror(req, "write body"); /* OK to disable if your logs get too big */
             return 0;
-        } else {
+        }
+        else
+        {
             boa_perror(req, "write body"); /* OK to disable if your logs get too big */
             return 0;
         }
@@ -373,5 +411,5 @@ int write_body(request * req)
     req->filepos += bytes_written;
     req->header_line += bytes_written;
 
-    return 1;                   /* more to do */
+    return 1; /* more to do */
 }

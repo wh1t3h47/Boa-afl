@@ -45,7 +45,7 @@ int get_alias_hash_value(char *file)
 
     hash = file[index++];
     while ((c = file[index++]) && c != '/')
-        hash += (unsigned int) c;
+        hash += (unsigned int)c;
 
     return hash % ALIAS_HASHTABLE_SIZE;
 }
@@ -64,13 +64,15 @@ void add_alias(char *fakename, char *realname, int type)
     int fakelen, reallen;
 
     /* sanity checking */
-    if (fakename == NULL || realname == NULL) {
+    if (fakename == NULL || realname == NULL)
+    {
         DIE("NULL values sent to add_alias");
     }
 
     fakelen = strlen(fakename);
     reallen = strlen(realname);
-    if (fakelen == 0 || reallen == 0) {
+    if (fakelen == 0 || reallen == 0)
+    {
         DIE("empty values sent to add_alias");
     }
 
@@ -78,16 +80,19 @@ void add_alias(char *fakename, char *realname, int type)
 
     old = alias_hashtable[hash];
 
-    if (old) {
-        while (old->next) {
+    if (old)
+    {
+        while (old->next)
+        {
             if (!strcmp(fakename, old->fakename)) /* don't add twice */
                 return;
             old = old->next;
         }
     }
 
-    new = (alias *) malloc(sizeof (alias));
-    if (!new) {
+    new = (alias *)malloc(sizeof(alias));
+    if (!new)
+    {
         DIE("out of memory adding alias to hash");
     }
 
@@ -97,21 +102,27 @@ void add_alias(char *fakename, char *realname, int type)
         alias_hashtable[hash] = new;
 
     new->fakename = strdup(fakename);
-    if (!new->fakename) {
+    if (!new->fakename)
+    {
         DIE("failed strdup");
     }
     new->fake_len = fakelen;
     /* check for "here" */
-    if (realname[0] == '.' && realname[1] == '/') {
-        new->realname = normalize_path(realname+2);
-        if (!new->realname) {
+    if (realname[0] == '.' && realname[1] == '/')
+    {
+        new->realname = normalize_path(realname + 2);
+        if (!new->realname)
+        {
             /* superfluous - normalize_path checks for NULL return values. */
             DIE("normalize_path returned NULL");
         }
         reallen = strlen(new->realname);
-    } else {
+    }
+    else
+    {
         new->realname = strdup(realname);
-        if (!new->realname) {
+        if (!new->realname)
+        {
             DIE("strdup of realname failed");
         }
     }
@@ -143,7 +154,8 @@ alias *find_alias(char *uri, int urilen)
     hash = get_alias_hash_value(uri);
 
     current = alias_hashtable[hash];
-    while (current) {
+    while (current)
+    {
 #ifdef FASCIST_LOGGING
         fprintf(stderr,
                 "%s:%d - comparing \"%s\" (request) to \"%s\" (alias): ",
@@ -164,11 +176,12 @@ alias *find_alias(char *uri, int urilen)
             (current->fakename[current->fake_len - 1] == '/' ||
              (current->fakename[current->fake_len - 1] != '/' &&
               (uri[current->fake_len] == '\0' ||
-               uri[current->fake_len] == '/')))) {
+               uri[current->fake_len] == '/'))))
+        {
 #ifdef FASCIST_LOGGING
-                fprintf(stderr, "Got it!\n");
+            fprintf(stderr, "Got it!\n");
 #endif
-                return current;
+            return current;
         }
 #ifdef FASCIST_LOGGING
         else
@@ -196,7 +209,7 @@ alias *find_alias(char *uri, int urilen)
  *   1: success, continue
  */
 
-int translate_uri(request * req)
+int translate_uri(request *req)
 {
     static char buffer[MAX_HEADER_LENGTH + 1];
     char *req_urip;
@@ -205,15 +218,19 @@ int translate_uri(request * req)
     int uri_len;
 
     req_urip = req->request_uri;
-    if (req_urip[0] != '/') {
+    if (req_urip[0] != '/')
+    {
         send_r_bad_request(req);
         return 0;
     }
 
+    printf("req->request_uri: %s\n", req->request_uri);
+
     uri_len = strlen(req->request_uri);
 
     current = find_alias(req->request_uri, uri_len);
-    if (current) {
+    if (current)
+    {
 
         if (current->type == SCRIPTALIAS) /* Script */
             return init_script_alias(req, current, uri_len);
@@ -224,7 +241,8 @@ int translate_uri(request * req)
             int len;
             len = current->real_len;
             len += uri_len - current->fake_len;
-            if (len > MAX_HEADER_LENGTH) {
+            if (len > MAX_HEADER_LENGTH)
+            {
                 log_error_doc(req);
                 fputs("uri too long!\n", stderr);
                 send_r_bad_request(req);
@@ -236,17 +254,22 @@ int translate_uri(request * req)
                    uri_len - current->fake_len + 1);
         }
 
-        if (current->type == REDIRECT) { /* Redirect */
-            if (req->method == M_POST) { /* POST to non-script */
+        if (current->type == REDIRECT)
+        { /* Redirect */
+            if (req->method == M_POST)
+            { /* POST to non-script */
                 /* it's not a cgi, but we try to POST??? */
                 send_r_bad_request(req);
-                return 0;       /* not a script alias, therefore begin filling in data */
+                return 0; /* not a script alias, therefore begin filling in data */
             }
             send_r_moved_temp(req, buffer, "");
             return 0;
-        } else {                /* Alias */
+        }
+        else
+        { /* Alias */
             req->pathname = strdup(buffer);
-            if (!req->pathname) {
+            if (!req->pathname)
+            {
                 send_r_error(req);
                 WARN("unable to strdup buffer onto req->pathname");
                 return 0;
@@ -260,7 +283,8 @@ int translate_uri(request * req)
        after aliasing, we still have to check for '~' expansion
      */
 
-    if (user_dir && req->request_uri[1] == '~') {
+    if (user_dir && req->request_uri[1] == '~')
+    {
         char *user_homedir;
 
         req_urip = req->request_uri + 2;
@@ -271,10 +295,11 @@ int translate_uri(request * req)
             *p = '\0';
 
         user_homedir = get_home_dir(req_urip);
-        if (p)                  /* have to restore request_uri in case of error */
+        if (p) /* have to restore request_uri in case of error */
             *p = '/';
 
-        if (!user_homedir) {    /*no such user */
+        if (!user_homedir)
+        { /*no such user */
             send_r_not_found(req);
             return 0;
         }
@@ -283,7 +308,8 @@ int translate_uri(request * req)
             int l2 = strlen(user_dir);
             int l3 = (p ? strlen(p) : 0);
 
-            if (l1 + l2 + l3 + 1 > MAX_HEADER_LENGTH) {
+            if (l1 + l2 + l3 + 1 > MAX_HEADER_LENGTH)
+            {
                 log_error_doc(req);
                 fputs("uri too long!\n", stderr);
                 send_r_bad_request(req);
@@ -296,7 +322,9 @@ int translate_uri(request * req)
             if (p)
                 memcpy(buffer + l1 + 1 + l2, p, l3 + 1);
         }
-    } else if (document_root) {
+    }
+    else if (document_root)
+    {
         /* no aliasing, no userdir... */
         int l1, l2, l3;
 
@@ -307,7 +335,8 @@ int translate_uri(request * req)
         else
             l3 = 0;
 
-        if (l1 + l2 + l3 + 1 > MAX_HEADER_LENGTH) {
+        if (l1 + l2 + l3 + 1 > MAX_HEADER_LENGTH)
+        {
             log_error_doc(req);
             fputs("uri too long!\n", stderr);
             send_r_bad_request(req);
@@ -316,13 +345,17 @@ int translate_uri(request * req)
 
         /* the 'l2 + 1' is there so we copy the '\0' as well */
         memcpy(buffer, document_root, l1);
-        if (virtualhost) {
+        if (virtualhost)
+        {
             buffer[l1] = '/';
             memcpy(buffer + l1 + 1, req->local_ip_addr, l3);
             memcpy(buffer + l1 + 1 + l3, req->request_uri, l2 + 1);
-        } else
+        }
+        else
             memcpy(buffer + l1, req->request_uri, l2 + 1);
-    } else {
+    }
+    else
+    {
         /* not aliased.  not userdir.  not part of document_root.  BAIL */
         send_r_not_found(req);
         return 0;
@@ -335,14 +368,16 @@ int translate_uri(request * req)
      */
 
     req->pathname = strdup(buffer);
-    if (!req->pathname) {
+    if (!req->pathname)
+    {
         WARN("Could not strdup buffer for req->pathname!");
         send_r_error(req);
         return 0;
     }
 
     /* below we support cgis outside of a ScriptAlias */
-    if (strcmp(CGI_MIME_TYPE, get_mime_type(buffer)) == 0) { /* cgi */
+    if (strcmp(CGI_MIME_TYPE, get_mime_type(buffer)) == 0)
+    { /* cgi */
 #ifdef FASCIST_LOGGING
         log_error_time();
         fprintf(stderr, "%s:%d - buffer is: \"%s\"\n",
@@ -351,7 +386,8 @@ int translate_uri(request * req)
         /* FIXME */
         /* script_name could end up as /cgi-bin/bob/extra_path */
         req->script_name = strdup(req->request_uri);
-        if (!req->script_name) {
+        if (!req->script_name)
+        {
             WARN("Could not strdup req->request_uri for req->script_name");
             send_r_error(req);
             return 0;
@@ -361,11 +397,14 @@ int translate_uri(request * req)
         else
             req->is_cgi = CGI;
         return 1;
-    } else if (req->method == M_POST) { /* POST to non-script */
+    }
+    else if (req->method == M_POST)
+    { /* POST to non-script */
         /* it's not a cgi, but we try to POST??? */
         send_r_bad_request(req);
         return 0;
-    } else                      /* we are done!! */
+    }
+    else /* we are done!! */
         return 1;
 }
 
@@ -381,7 +420,7 @@ int translate_uri(request * req)
  * 1: success, continue
  */
 
-int init_script_alias(request * req, alias * current1, int uri_len)
+int init_script_alias(request *req, alias *current1, int uri_len)
 {
     static char pathname[MAX_HEADER_LENGTH + 1];
     struct stat statbuf;
@@ -396,7 +435,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
      */
 
     if (uri_len - current1->fake_len + current1->real_len >
-        MAX_HEADER_LENGTH) {
+        MAX_HEADER_LENGTH)
+    {
         log_error_doc(req);
         fputs("uri too long!\n", stderr);
         send_r_bad_request(req);
@@ -413,11 +453,10 @@ int init_script_alias(request * req, alias * current1, int uri_len)
             "%s:%d - pathname in init_script_alias is: \"%s\" (\"%s\")\n",
             __FILE__, __LINE__, pathname, pathname + current1->real_len);
 #endif
-    if (strncmp("nph-", pathname + current1->real_len, 4) == 0
-        || req->simple) req->is_cgi = NPH;
+    if (strncmp("nph-", pathname + current1->real_len, 4) == 0 || req->simple)
+        req->is_cgi = NPH;
     else
         req->is_cgi = CGI;
-
 
     /* start at the beginning of the actual uri...
      (in /cgi-bin/bob, start at the 'b' in bob */
@@ -427,25 +466,30 @@ int init_script_alias(request * req, alias * current1, int uri_len)
      * if it is a full pathname
      * on success (stat (not lstat) of file is a *regular file*)
      */
-    do {
+    do
+    {
         c = pathname[++index];
-        if (c == '/') {
+        if (c == '/')
+        {
             pathname[index] = '\0';
             err = stat(pathname, &statbuf);
             pathname[index] = '/';
-            if (err == -1) {
+            if (err == -1)
+            {
                 send_r_not_found(req);
                 return 0;
             }
 
             /* is it a dir? */
-            if (!S_ISDIR(statbuf.st_mode)) {
+            if (!S_ISDIR(statbuf.st_mode))
+            {
                 /* check access */
                 if (!(statbuf.st_mode &
-                      (S_IFREG | /* regular file */
-                       (S_IRUSR | S_IXUSR) |    /* u+rx */
-                       (S_IRGRP | S_IXGRP) |    /* g+rx */
-                       (S_IROTH | S_IXOTH)))) { /* o+rx */
+                      (S_IFREG |             /* regular file */
+                       (S_IRUSR | S_IXUSR) | /* u+rx */
+                       (S_IRGRP | S_IXGRP) | /* g+rx */
+                       (S_IROTH | S_IXOTH))))
+                { /* o+rx */
                     send_r_forbidden(req);
                     return 0;
                 }
@@ -456,45 +500,54 @@ int init_script_alias(request * req, alias * current1, int uri_len)
     } while (c != '\0');
 
     req->script_name = strdup(req->request_uri);
-    if (!req->script_name) {
+    if (!req->script_name)
+    {
         send_r_error(req);
         WARN("unable to strdup req->request_uri for req->script_name");
         return 0;
     }
 
-    if (c == '\0') {
+    if (c == '\0')
+    {
         err = stat(pathname, &statbuf);
-        if (err == -1) {
+        if (err == -1)
+        {
             send_r_not_found(req);
             return 0;
         }
 
         /* is it a dir? */
-        if (!S_ISDIR(statbuf.st_mode)) {
+        if (!S_ISDIR(statbuf.st_mode))
+        {
             /* check access */
             if (!(statbuf.st_mode &
-                  (S_IFREG | /* regular file */
-                   (S_IRUSR | S_IXUSR) |    /* u+rx */
-                   (S_IRGRP | S_IXGRP) |    /* g+rx */
-                   (S_IROTH | S_IXOTH)))) { /* o+rx */
+                  (S_IFREG |             /* regular file */
+                   (S_IRUSR | S_IXUSR) | /* u+rx */
+                   (S_IRGRP | S_IXGRP) | /* g+rx */
+                   (S_IROTH | S_IXOTH))))
+            { /* o+rx */
                 send_r_forbidden(req);
                 return 0;
             }
             /* stop here */
-        } else {
+        }
+        else
+        {
             send_r_forbidden(req);
             return 0;
         }
     }
 
     /* we have path_info if c == '/'... still have to check for query */
-    else if (c == '/') {
+    else if (c == '/')
+    {
         int hash;
         alias *current;
         int path_len;
 
         req->path_info = strdup(pathname + index);
-        if (!req->path_info) {
+        if (!req->path_info)
+        {
             send_r_error(req);
             WARN("unable to strdup pathname + index for req->path_info");
             return 0;
@@ -513,12 +566,16 @@ int init_script_alias(request * req, alias * current1, int uri_len)
          */
         hash = get_alias_hash_value(req->path_info);
         current = alias_hashtable[hash];
-        while (current && !req->path_translated) {
+        while (current && !req->path_translated)
+        {
             if (!strncmp(req->path_info, current->fakename,
-                         current->fake_len)) {
+                         current->fake_len))
+            {
 
                 if (current->real_len +
-                    path_len - current->fake_len > MAX_HEADER_LENGTH) {
+                        path_len - current->fake_len >
+                    MAX_HEADER_LENGTH)
+                {
                     log_error_doc(req);
                     fputs("uri too long!\n", stderr);
                     send_r_bad_request(req);
@@ -529,7 +586,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
                 strcpy(buffer + current->real_len,
                        &req->path_info[current->fake_len]);
                 req->path_translated = strdup(buffer);
-                if (!req->path_translated) {
+                if (!req->path_translated)
+                {
                     send_r_error(req);
                     WARN("unable to strdup buffer for req->path_translated");
                     return 0;
@@ -538,7 +596,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
             current = current->next;
         }
         /* no alias... try userdir */
-        if (!req->path_translated && user_dir && req->path_info[1] == '~') {
+        if (!req->path_translated && user_dir && req->path_info[1] == '~')
+        {
             char *user_homedir;
             char *p;
 
@@ -550,7 +609,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
             if (p)
                 *p = '/';
 
-            if (!user_homedir) { /* no such user */
+            if (!user_homedir)
+            { /* no such user */
                 send_r_not_found(req);
                 return 0;
             }
@@ -564,7 +624,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
                     l3 = 0;
 
                 req->path_translated = malloc(l1 + l2 + l3 + 2);
-                if (req->path_translated == NULL) {
+                if (req->path_translated == NULL)
+                {
                     send_r_error(req);
                     WARN("unable to malloc memory for req->path_translated");
                     return 0;
@@ -576,14 +637,16 @@ int init_script_alias(request * req, alias * current1, int uri_len)
                     memcpy(req->path_translated + l1 + 1 + l2, p, l3 + 1);
             }
         }
-        if (!req->path_translated && document_root) {
+        if (!req->path_translated && document_root)
+        {
             /* no userdir, no aliasing... try document root */
             int l1, l2;
             l1 = strlen(document_root);
             l2 = path_len;
 
             req->path_translated = malloc(l1 + l2 + 1);
-            if (req->path_translated == NULL) {
+            if (req->path_translated == NULL)
+            {
                 send_r_error(req);
                 WARN("unable to malloc memory for req->path_translated");
                 return 0;
@@ -594,7 +657,8 @@ int init_script_alias(request * req, alias * current1, int uri_len)
     }
 
     req->pathname = strdup(pathname);
-    if (!req->pathname) {
+    if (!req->pathname)
+    {
         send_r_error(req);
         WARN("unable to strdup pathname for req->pathname");
         return 0;
@@ -612,10 +676,13 @@ void dump_alias(void)
     int i;
     alias *temp;
 
-    for (i = 0; i < ALIAS_HASHTABLE_SIZE; ++i) { /* these limits OK? */
-        if (alias_hashtable[i]) {
+    for (i = 0; i < ALIAS_HASHTABLE_SIZE; ++i)
+    { /* these limits OK? */
+        if (alias_hashtable[i])
+        {
             temp = alias_hashtable[i];
-            while (temp) {
+            while (temp)
+            {
                 alias *temp_next;
 
                 if (temp->fakename)

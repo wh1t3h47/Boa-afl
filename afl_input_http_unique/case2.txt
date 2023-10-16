@@ -1,0 +1,5 @@
+POST /path/to/script HTTP/1.0
+Content-Length: 100
+
+Data=@@
+
